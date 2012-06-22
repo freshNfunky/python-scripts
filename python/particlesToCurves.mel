@@ -1,0 +1,418 @@
+// particlesToCurves.mel
+//-----------------------------------------------------------------------------------
+// Contains User Iinterface and is responsible for creating extruded geometry
+// along curves constructed from baked particle data.  This script ustilizes
+// three python scrips: queryParticles2.py, drawCurvesMaya2.py, and drawCurvesRman2.py
+//-----------------------------------------------------------------------------------
+
+
+// Procedure bakeData() queries values from path and frame range text fields, calls 
+// buildFile procedure of queryParticles.py in order to write particle data files
+global proc bakeData(){
+
+	string $particles[] = `ls -sl`;
+	print $particles;
+	// Declare global variables
+	global string $pathTextField;
+	global string $frameTextField;
+	global string $userPathInput;
+	global string $frame;
+
+	// Get slider values
+	$userPathInput = `textFieldGrp -q -text $pathTextField`;
+	$frame = `textFieldGrp -q -text $frameTextField`;
+	
+	// Call queryParticles python script to bake particle data
+	python("reload(queryParticles2)");
+	python("queryParticles2.buildFile(" + $frame + ", '" + $particles[0] + "', '" + $userPathInput + "')");
+	// python("queryParticles2.buildFile(" + $frame + ", 'particle', '" + $userPathInput + "')");
+	
+}
+
+
+// Procedure mayaCurves(), calls masterControl procedure of drawCurvesMaya2.py in order 
+// to create curves from particle paths.  Also refers to global variables from bakeData procedure
+global proc mayaCurves(){
+
+	global string $userPathInput;
+	
+	python("reload(drawCurvesMaya2)");
+	python("drawCurvesMaya2.masterControl('" + $userPathInput + "')");
+
+}
+
+
+// Procedure rManCurves(), calls masterControl procedure of drawCurvesRman2.py in order to create 
+// RIB archives containing Renderman curves, as well as a scene RIB file which can be used to render
+// these curves using prman.  Also refers to global variables from bakeData procedure
+global proc rManCurves(){
+
+	global string $userPathInput;
+	
+	python("reload(drawCurvesRman2)");
+	python("drawCurvesRman2.masterControl('" + $userPathInput + "')");
+}
+
+
+// Procedure extrudeCircle(), creates a nurbs circle for each curve path, places the circle at the 
+// starting position of each particle and centers its pivot point, and performs an extrusion along 
+// the curve path, using parameters taken from UI elements $extrudeRadSlider, $extrudeScaleSlider, and $extrudeCountSlider
+global proc extrudeCircle(){
+
+	// Declare global variables
+	global string $userPathInput;
+	global string $extrudeRadSlider;
+	global string $extrudeScaleSlider;
+	global string $extrudeCountSlider;
+	global string $circleShape[];
+	global string $extrudeShape[];
+	
+	// Import os to get number of files in a directory
+	python("import os");
+	
+	string $particlePath = $userPathInput + "/particles";
+	string $particleFile = $particlePath + "/particleNum";
+	
+	// Get number of files in particle directory
+	string $num[] = `python("os.listdir('" + $particlePath +"')")`;
+	int $pNum = size($num);
+	
+	// Get slider values
+	float $taperScale = `floatSliderGrp -q -v $extrudeScaleSlider`;
+	int $exCount = `intSliderGrp -q -v $extrudeCountSlider`;
+	float $radVal = `floatSliderGrp -q -v $extrudeRadSlider`;
+	
+	// Declare local variables
+	string $fileID[];
+	string $particlePos[];
+	string $curveNum;
+	string $circleCommand;
+	string $profileCircle[];
+	string $extrudeSurface[];
+	string $setTess;
+	string $setQuads;
+	string $setCount;
+	
+	// Cycles through all particles
+	for($n = 0; $n < $pNum; $n++) {
+		
+		// Open and read the first line of each particle file
+		$fileID[$n] = $particleFile + $n + ".mel";
+		python("pFile = open('" + $fileID[$n] + "', 'r')");
+		$particlePos[$n] = `python("pFile.readline()")`;
+
+		// Strip the end of line return character
+		$particlePos[$n] = strip($particlePos[$n]);
+		
+		// Store curve name
+		$curveNum = "curve" + ($n+1);
+		
+		// Create circle at origin of particle
+		$circleCommand = "circle -c " + $particlePos[$n] + " -nr 0 1 0 -sw 360 -r " + $radVal + " -d 3 -ut 0 -tol 0.01 -s 8 -ch 1;";
+		$profileCircle = `eval($circleCommand)`;
+		$circleShape[$n] = $profileCircle[0];
+		
+		// Freeze transformations of circle
+		xform -cp $circleShape[$n];
+		
+		// Extrude circle along particle curve path
+		$extrudeCommand = "extrude -ch true -rn true -po 1 -et 2 -ucp 0 -fpt 1 -upn 1 -rotation 0 -scale " + $taperScale + " -rsp 1 " + $profileCircle[0] + " " + $curveNum + ";";
+		$extrudeSurface = `eval($extrudeCommand)`;
+		$extrudeShape[$n] = $extrudeSurface[0];
+		
+		// Set the tessellation format to Count 
+		$setTess = ("nurbsTessellate" + ($n+1) + ".format");
+		setAttr $setTess 0;
+		
+		// Set the polygonType to Quads
+		$setQuads = ("nurbsTessellate" + ($n+1) + ".polygonType");
+		setAttr $setQuads 1;
+		
+		// Set the divisons based on the count value
+		$setCount = ("nurbsTessellate" + ($n+1) + ".polygonCount");
+		setAttr $setCount $exCount;
+		
+	}
+}
+
+
+//Procedure tweakRad(), allows for real-time adjustment of profile circle radius
+//after the creation of the extruded surfaces
+global proc tweakRad(){
+
+	// Declare global variables
+	global string $tweakRadSlider;
+	global string $extrudeShape[];
+	global int $numExtrudedSurf;
+	
+	// Get value of slider
+	float $twkRad = `floatSliderGrp -q -v $tweakRadSlider`;
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	// Declare local variable
+	string $setRadTweak;
+	
+	// Cycle through number of extruded surfaces and adjust the radius
+	for($n = 0; $n < $numExtrudedSurf; $n++) {
+		$setRadTweak = "makeNurbCircle" + ($n+1) + ".radius";
+		setAttr $setRadTweak $twkRad;
+	}
+}
+
+
+//Procedure tweakScale(), allows for the real-time adjustment of extrusion taper
+//after the creation of the extruded surfaces
+global proc tweakScale() {
+
+	// Declare global variables
+	global string $tweakScaleSlider;
+	global string $extrudeShape[];
+	global int $numExtrudedSurf;
+	
+	// Get value of slider
+	float $scaleVal = `floatSliderGrp -q -v $tweakScaleSlider`;
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	// Declare local variable
+	string $setScaleTweak;
+	
+	// Cycle through number of extruded surfaces and adjust the scale
+	for($n = 0; $n < $numExtrudedSurf; $n++) {
+		$setScaleTweak = "extrude" + ($n+1) + ".scale";
+		setAttr $setScaleTweak $scaleVal;
+	}	
+}
+
+
+//Procedure tweakCount(), allows for the real-time adjustment of extruded surface
+//divisions
+global proc tweakCount() {
+
+	// Declare global variables
+	global string $tweakCountSlider;
+	global string $extrudeShape[];
+	global int $numExtrudedSurf;
+	
+	// Get value of slider
+	float $countVal = `intSliderGrp -q -v $tweakCountSlider`;
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	// Declare local variable
+	string $setCountTweak;
+	
+	// Cycle through number of extruded surfaces and adjust the count
+	for($n = 0; $n < $numExtrudedSurf; $n++) {
+		$setCountTweak = "nurbsTessellate" + ($n+1) + ".polygonCount";
+		setAttr $setCountTweak $countVal;
+	}	
+}
+
+
+//Procedure extrudeDis(), allows for the real-time adjustment of the overall
+//extrusion distance after the creation of the extruded surfaces
+global proc extrudeDis(){
+
+	// Declare global variables
+	global string $extrusionSlider;
+	global string $extrudeShape[];
+	global int $numExtrudeSurf;
+	
+	// Get slider value
+	float $exDVal = `floatSliderGrp -q -v $extrusionSlider`;
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	// Declare local variable
+	string $setExD;
+	
+	// Cycle through number of extruded surfaces and adjust the distance
+	for($n = 1; $n <= $numExtrudedSurf; $n++) {
+		$setExD = "subCurve" + ($n * 2) + ".maxValue"; 
+		setAttr $setExD $exDVal;
+	}
+}
+
+// Procedure keyExtrude(), takes starting/ending keyframe and value information from the UI in order to generate
+// an animated extrusion 
+global proc keyExtrude() {
+
+	// Declare global variables
+	global string $startDistSlider;
+	global string $startKeyTextField;
+	global string $endDistSlider;
+	global string $endKeyTextField;
+	global string $extrudeShape[];
+	global int $numExtrudeSurf;
+	
+	// Get slider values
+	float $startVal = `floatSliderGrp -q -v $startDistSlider`;
+	int $startFrame = `textFieldGrp -q -text $startKeyTextField`;
+	float $endVal = `floatSliderGrp -q -v $endDistSlider`;
+	int $endFrame = `textFieldGrp -q -text $endKeyTextField`;
+	
+	// Set the start time
+	string $setStartTime = "currentTime " + $startFrame;
+	eval($setStartTime);
+	
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	
+	// Set starting key for all surfaces
+	for($n = 1; $n <= $numExtrudedSurf; $n++) {
+		setKeyframe -value $startVal -attribute "maxValue" ("subCurve" + ($n * 2));
+	}
+
+	// Set the end time
+	$setEndTime = "currentTime " + $endFrame;
+	eval($setEndTime);
+	
+	// Set ending key for all surfaces
+	for($i = 1; $i < $numExtrudedSurf; $i++) {
+		setKeyframe -value $endVal -attribute "maxValue" ("subCurve" + ($i * 2));
+	}
+}
+
+
+// Procedure keyDelete() deletes all keys previously set
+global proc keyDelete() {
+
+	// Declare global variables
+	global string $startKeyTextField;
+	global string $endKeyTextField;
+	global string $extrudeShape[];
+	global int $numExtrudeSurf;
+	
+	// Get slider values
+	int $startFrame = `textFieldGrp -q -text $startKeyTextField`;
+	int $endFrame = `textFieldGrp -q -text $endKeyTextField`;
+	
+	// Get number of extruded surfaces
+	$numExtrudedSurf = `size($extrudeShape)`;
+	
+	// Delete keys for all extruded surfaces
+	for($n = 1; $n < $numExtrudedSurf; $n++) {
+		cutKey -attribute "maxValue" ("subCurve" + ($n *2));
+	}
+}
+
+
+//Procedure particlesToCurves(), responsible for the UI elements
+global proc particlesToCurves()
+{
+	
+	// Import custom pytyhon scripts
+	python("import queryParticles2");
+	python("import drawCurvesMaya2");
+	python("import drawCurvesRman2");
+	
+	// Declare global variables
+	global string $pathTextField;
+	global string $frameTextField;
+	global string $extrudeRadSlider;
+	global string $extrudeScaleSlider;
+	global string $extrudeCountSlider;
+	global string $tweakRadSlider;
+	global string $tweakScaleSlider;
+	global string $tweakCountSlider;
+	global string $extrusionSlider;
+	global string $startDistSlider;
+	global string $startKeyTextField;
+	global string $endDistSlider;
+	global string $endKeyTextField;
+	global string $winName;
+	
+	// Reconstruct window if it already exists
+	if(`window -exists $winName`)
+		deleteUI $winName;
+	
+	// Create Particle to Curves window
+	$winName = `window -title "Particles To Curves" -iconName "Particles to Curves"`;
+	
+	// Start of window content
+	frameLayout -l "";
+		columnLayout -adjustableColumn true;
+			
+			// Step 1: Bake Particle Data
+			frameLayout -label "Step 1: Bake Particle Data" -bv 1 -bs "in" -w 450 -h 150;
+				columnLayout;
+					text -label "" -w 100 -h 5;
+					$pathTextField = `textFieldGrp -label "Directory Location: " -w 450 -h 25 -ed 1 -text "Z:/cgi/projects/velvet/lg_flutter/50_maya"`; 
+					text -label "" -w 100 -h 5;
+					$frameTextField = `textFieldGrp -label "Frame Range: " -w 450 -h 25 -ed 1 - text "25"`;
+					text -label "" -w 100 -h 5;
+					button -label "Bake Data " -w 490 -h 50 -command "bakeData()";
+					text -label "" -w 100 -h 5;
+					setParent ..;
+				setParent ..;
+			
+			// Step 2: Create Curves from Particles
+			frameLayout -label "Step 2: Create Curves from Particles" -bv 1 -bs "in" -w 450 -h 150;
+				columnLayout;
+					text -label "" -w 100 -h 5;
+					button -label "Create Maya Curves" -w 490 -h 50 -command "mayaCurves()";
+					text -label "" -w 100 -h 5;
+					button -label "Create Renderman Curves" -w 490 -h 50 -command "rManCurves()";
+					text -label "" -w 100 -h 5;
+					setParent ..;
+				setParent ..;
+				
+			// Step 3: Extrude Along Maya Curves
+			frameLayout -label "Step 3: Extrude Along Maya Curves" -bv 1 -bs "in" -w 450 -h 175;
+				columnLayout;
+					text -label "" -w 100 -h 5;
+					$extrudeRadSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Profile Radius: " -min 0.01 -max 5.0 -v 0.05`;
+					text -label "" -w 100 -h 5;	
+					$extrudeScaleSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Taper Scale: " -min 0.01 -max 5.0 -v 0.1`;
+					text -label "" -w 100 -h 5;
+					$extrudeCountSlider = `intSliderGrp -columnWidth 1 175 -field true -label "Surface Divisions: " -min 100 -max 1600 -v 300`;
+					text -label "" -w 100 -h 5;
+					button -label "Extrude Circle Profile" -w 490 -h 50 -command "extrudeCircle()";
+					text -label "" -w 100 -h 5;
+					setParent ..;
+				setParent ..;
+				
+			// Step 4: Tweak Extrusion Parameters
+			frameLayout -label "Step 4: Tweak Extrusion Parameters" -bv 1 -bs "in" -w 450 -h 150;
+				columnLayout;
+					text -label "" -w 100 -h 5;
+					$tweakRadSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Tweak Radius: " -min 0.01 -max 8.0 -v 0.1 
+										-s 0.01 -dragCommand "tweakRad()" -changeCommand "tweakRad()"`;
+					text -label "" -w 100 -h 5;
+					$tweakScaleSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Tweak Taper: " -min 0.01 -max 8.0 -v 0.1 
+										-s 0.01 -dragCommand "tweakScale()" -changeCommand "tweakScale()"`;
+					text -label "" -w 100 -h 5;
+					$tweakCountSlider = `intSliderGrp -columnWidth 1 175 -field true -label "Tweak Divisions: " -min 50 -max 2000 -v 300 
+										-s 50 -dragCommand "tweakCount()" -changeCommand "tweakCount()"`;
+					text -label "" -w 100 -h 5;
+					$extrusionSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Tweak Extrusion Distance: " -min 0.0 -max 1.0 -v 1.0
+										-s 0.01 -dragCommand "extrudeDis()" -changeCommand "extrudeDis()"`;
+					text -label "" -w 100 -h 5;
+					setParent ..;
+				setParent ..;
+			
+			// Step 5: Animate the Extrusion
+			frameLayout -label "Step 5: Animate the Extrusion" -bv 1 -bs "in" -w 450 -h 250;
+				columnLayout;
+					text -label "" -w 100 -h 5;		
+					$startDistSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "Start Extrusion Distance: " -min 0.0 -max 1.0 -v 0.0
+										-s 0.01`;
+					$startKeyTextField = `textFieldGrp -label "Start Keyframe: " -w 450 -h 25 -ed 1 -text "1"`;
+					text -label "" -w 100 -h 5;	
+					$endDistSlider = `floatSliderGrp -columnWidth 1 175 -field true -label "End Extrusion Distance: " -min 0.0 -max 1.0 -v 1.0
+										-s 0.01`;
+					text -label "" -w 100 -h 5;	
+					$endKeyTextField = `textFieldGrp -label "End Keyframe: " -w 450 -h 25 -ed 1 -text "30"`;
+					text -label "" -w 100 -h 5;	
+					button -label "Create Start and End Keyframes" -w 490 -h 50 -command "keyExtrude()";
+					text -label "" -w 100 -h 5;
+					button -label "Clear Keyframes" -w 490 -h 50 -command "keyDelete()";
+					text -label "" -w 100 -h 5;
+					setParent ..;
+				setParent ..;
+	showWindow $winName;
+	
+	// Window dimensions
+	window -edit -widthHeight 500 900 $winName;
+}
+
+// Call particlesToCurves to execute UI
+particlesToCurves();

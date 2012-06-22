@@ -1,0 +1,186 @@
+string $model = "house";
+
+global string $work = ""; $work = `workspace -q -dir`;
+global string $fnMB = ""; $fnMB = $work + $model + ".ma";
+global string $fnHist = ""; $fnHist = $work + "history.txt";
+global string $fnInfo = ""; $fnInfo = $work + "info.bin";
+
+global int $snapshot = 0;
+global float $lastsnap = -1;
+global int $lastcounts[] = { 0, 0, 0 };
+global float $lastpos[] = { 0, 0, 0 };
+global string $lastfile = "";
+
+// based on:
+// http://www.creativecrash.com/maya/downloads/scripts-plugins/utility-external/export/c/generic-polygon-exporter/download_page
+global proc exportData()
+{
+    global int $snapshot;
+    global string $work;
+    global float $lastsnap;
+    global int $lastcounts[];
+    global float $lastpos[];
+    global string $lastfile;
+    global string $fnInfo;
+    global string $fnMB;
+    
+    string $objs[] = `ls -g`;
+    string $obj;
+    int $objCount = `size $objs`;
+    int $size;
+    int $iter;
+    string $x;
+    string $res[];
+    string $resParts[];
+    int $fileid;
+    
+    //if( `timerX -startTime $lastsnap` < 0.25 ) { return; }
+    //$lastsnap = `timerX`;
+    
+    int $curcounts[] = { 0, 0, 0 };
+    float $curpos[] = { 0, 0, 0 };
+    string $curfile = `file -q -sn`;
+    for( $obj in $objs )
+    {
+        int $pc[] = `polyEvaluate -v -e -f $obj`;
+        $curcounts[0] = $curcounts[0] + $pc[0];
+        $curcounts[1] = $curcounts[1] + $pc[1];
+        $curcounts[2] = $curcounts[2] + $pc[2];
+        
+        $x = $obj + ".vtx[0:" + ($pc[0]-1) + "]";
+        float $vpos[] = `xform -q -ws -t $x`;
+        while( $iter < $pc[0] )
+        {
+            $curpos[0] += $vpos[$iter*3+0];
+            $curpos[1] += $vpos[$iter*3+1];
+            $curpos[2] += $vpos[$iter*3+2];
+            $iter++;
+        }
+    }
+    if( 
+        ( $curcounts[0] == $lastcounts[0] && $curcounts[1] == $lastcounts[1] && $curcounts[2] == $lastcounts[2] ) &&
+        ( $curpos[0] == $lastpos[0] && $curpos[1] == $lastpos[1] && $curpos[2] == $lastpos[2] ) &&
+        ( $curfile == $lastfile )
+        )
+    {
+        return;
+    }
+    $lastcounts[0] = $curcounts[0];
+    $lastcounts[1] = $curcounts[1];
+    $lastcounts[2] = $curcounts[2];
+    $lastpos[0] = $curpos[0];
+    $lastpos[1] = $curpos[1];
+    $lastpos[2] = $curpos[2];
+    $lastfile = $curfile;
+    
+    string $filename = "snap" + $snapshot + ".bin";
+    $snapshot++;
+    
+    print( "//! " + $filename + "\n" );
+    
+    $fnMB = `file -q -sn`;
+    $fileid = `fopen $fnInfo "w"`;
+    fwrite $fileid $snapshot;
+    fwrite $fileid $fnMB;
+    fclose $fileid;
+    
+    $fileid = `fopen ($work + $filename) "w"`;
+    //fprint $fileid ("MESHCOUNT " + $objCount + "\n");
+    fwrite $fileid $objCount;
+    
+    $res = `ls -sl`;
+    $size = `size $res`;
+    //fprint $fileid ("SELECTEDCOUNT " + $size + "\n");
+    fwrite $fileid $size;
+    for( $x in $res )
+    {
+        //fprint $fileid ($x + "\n");
+        fwrite $fileid $x;
+    }
+    
+    for ( $obj in $objs )
+    {
+        //fprint $fileid ("NAME " + $obj + "\n");
+        fwrite $fileid $obj;
+        int $pc[] = `polyEvaluate -v -e -f $obj`;
+        
+        $size = $pc[0];
+        $iter = 0;
+        //fprint $fileid ("VERTCOUNT " + $size + "\n");
+        fwrite $fileid $size;
+        $x = $obj + ".vtx[0:" + ($size-1) + "]";
+        float $vpos[] = `xform -q -ws -t $x`;
+        $size = `size $vpos`;
+        while( $iter < $size )
+        {
+            fwrite $fileid $vpos[$iter];
+            $iter++;
+        }
+        
+        $size = $pc[1];
+        $iter = 0;
+        //fprint $fileid ("EDGECOUNT " + $size + "\n" );
+        fwrite $fileid $size;
+        while( $iter < $size )
+        {
+            $x = $obj + ".e[" + $iter + "]";
+            $res = `polyInfo -edgeToVertex $x`;
+            tokenize( $res[0], $resParts );
+            //fprint $fileid ( $resParts[2] + " " + $resParts[3] + "\n" );
+            fwrite $fileid ((int)$resParts[2]);
+            fwrite $fileid ((int)$resParts[3]);
+            $iter++;
+        }
+        
+        $size = $pc[2];
+        $iter = 0;
+        int $iter2;
+        //fprint $fileid ("FACECOUNT " + $size + "\n");
+        fwrite $fileid $size;
+        while( $iter < $size )
+        {
+            $x = $obj + ".f[" + $iter + "]";
+            $res = `polyInfo -faceToVertex $x`;
+            tokenize( $res[0], $resParts );
+            $vc = `size $resParts`;
+            $iter2 = 2;
+            //fprint $fileid (($vc-2) + " ");
+            fwrite $fileid ((int)($vc-2));
+            while( $iter2 < $vc )
+            {
+                //fprint $fileid ( $resParts[$iter2] + " " );
+                fwrite $fileid ((int)$resParts[$iter2]);
+                $iter2++;
+            }
+            //fprint $fileid "\n";
+            $iter++;
+        }
+    }
+    fclose $fileid;
+}
+
+if( `filetest -r $fnInfo` )
+{
+    int $fileid = `fopen $fnInfo "r"`;
+    $snapshot = `fread $fileid $snapshot`;
+    $fnMB = `fread $fileid $fnMB`;
+    fclose $fileid;
+}
+
+int $l = `size $fnMB`;
+if( `substring $fnMB ($l-1) $l` == "mb" )
+{
+    file -f -options "v=0" -typ "mayaBinary" -o $fnMB;
+} else {
+    file -f -options "v=0" -typ "mayaAscii" -o $fnMB;
+}
+
+scriptEditorInfo -historyFilename $fnHist -writeHistory true;
+
+scriptJob -event "ToolChanged" exportData;
+scriptJob -event "PostToolChanged" exportData;
+scriptJob -event "SelectionChanged" exportData;
+scriptJob -event "SelectModeChanged" exportData;
+scriptJob -event "SelectTypeChanged" exportData;
+
+
