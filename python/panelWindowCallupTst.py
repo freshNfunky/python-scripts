@@ -2,10 +2,10 @@
 import pymel  # touch pat.py in the cwd and try to import the empty file under Linux
 import string 
 import os,sys
-try:
-    from panelWindow import *
-except:
-    sys.path.append(os.getcwd())
-    from panelWindow import *
 
-openTestPanel()
+if not os.getcwd() in sys.path:
+    sys.path.append(os.getcwd())
+import panelWindow as pw
+
+reload (pw)
+pw.openTestPanel()
