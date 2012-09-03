@@ -14,17 +14,17 @@ class PanelWindow( object ):
             scriptedPanelType( self.__name__, unique=True )
         print self.instance 
         jobCmd = 'python(\\\"%s._setup()\\\")' % self.instance
-        job = "scriptJob -replacePrevious -parent \"%s\" -event \"SceneOpened\" \"%s\";" % ( self.__name__, jobCmd )
+        job = "import %s ; scriptJob -replacePrevious -parent \"%s\" -event \"SceneOpened\" \"%s\";" % (namespace, self.__name__, jobCmd )
         mel.eval(job)
 
         scriptedPanelType( self.__name__, edit=True,
                            unique=True,
-                           createCallback='python("import %s ; %s._createCallback()")' % (namespace, self.instance),
-                           initCallback='python("import %s ; %s._initCallback()"  )' % (namespace, self.instance),
-                           addCallback='python("import %s ; %s._addCallback()"   )' % (namespace, self.instance),
-                           removeCallback='python("import %s ; %s._removeCallback()")' % (namespace, self.instance),
-                           deleteCallback='python("import %s ; %s._deleteCallback()")' % (namespace, self.instance),
-                           saveStateCallback='python("import %s ; %s._deleteCallback()")' % (namespace, self.instance)
+                           createCallback='python("%s._createCallback()")' % self.instance,
+                           initCallback='python("%s._initCallback()"  )' % self.instance,
+                           addCallback='python("%s._addCallback()"   )' % self.instance,
+                           removeCallback='python("%s._removeCallback()")' %  self.instance,
+                           deleteCallback='python("%s._deleteCallback()")' % self.instance,
+                           saveStateCallback='python("%s._deleteCallback()")' % self.instance
                            )
 
 
