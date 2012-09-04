@@ -2,13 +2,14 @@ from pymel.all import *
 
 
 class PanelWindow( object ):
-    
+
+#------------------------------------------------------------------------    
     gSampleState=[]
-    panelType = 'iMayaScriptedPanelType'
-    panelName = 'iMayaScriptedPanel'
-    winName = 'iMayaUIWin'
+        
+    # winName = 'iMayaUIWin'
+    panelLabel = 'SamplePanel'
     panelWrapName = 'frm'
-    
+#------------------------------------------------------------------------    
     def __init__( self, name, title, namespace=__name__ ):
         
         # print "self instanceName: %s " % self.__class__.__name__
@@ -34,36 +35,43 @@ class PanelWindow( object ):
                            saveStateCallback='python("import %s ; %s._saveCallback()")' % (namespace, self.instance)
                            )
         print "RESULT: %s " % result
-
+#------------------------------------------------------------------------
     def _setup(self):
         """Command to be call for new scene"""
         print 'SETUP CALLED'
+        gMainPane = mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
+        print "Main Pane: %s" % sceneUIReplacement( update=gMainPane )
         panelName = sceneUIReplacement( getNextScriptedPanel=(self.__name__, self._title) )
-
+        
+        print "-->Panel Name: %s" % panelName
+        
         if panelName == '':
             try:
                 panelName = scriptedPanel( mbv=1, unParent=True, type=self.__name__, label=self._title )
+                scriptedPanel( panelName, e=True, parent=self.panelParent)
             except:
                 pass
         else:
             try:
-                label = panel( self.__name__, query=True, label=True )
-                scriptedPanel( self.__name__, edit=True,  label=self._title )
+                pLabel = panel( self.__name__, query=True, label=True )
+                panelName = scriptedPanel( self.__name__, edit=True,  label=pLabel )
+                scriptedPanel( panelName, e=True, parent=self.panelParent)
             except:
                 pass
 
-
+#------------------------------------------------------------------------
     def _createCallback(self):
         """Create any editors unparented here and do any other initialization required."""
         print 'CREATE CALLBACK'
         self.gSampleState = {'fsg1':0, 'fsg2':1, 'fsg3':3, 'rbg':1, 'rbg1':2}
 
-
+#------------------------------------------------------------------------
     def _initCallback(self):
         """Re-initialize the panel on file -new or file -open."""
         print 'INIT CALLBACK'
+        # needs to be filled out when more advanced with save, new, open etc.
 
-
+#------------------------------------------------------------------------
     def _addCallback(self):
         """Create UI and parent any editors."""
         print 'ADD CALLBACK'
@@ -73,7 +81,7 @@ class PanelWindow( object ):
         if not self.gSampleState.__len__() : 
             self._createCallback()
             print "---->gSampleState was Empty"
-        
+        #------------------------------- testmodule
         columnLayout('topCol',adj=True)
         separator(h=10,style="none")
         frameLayout(mw=10,l="Sliders")
@@ -101,27 +109,30 @@ class PanelWindow( object ):
             select=self.gSampleState['rbg'],
             la3=("Option 4", "Option 5", "Option 6"))
         separator(h=10,style="none")
-
-
+        #------------------------------- testmodule
+#------------------------------------------------------------------------
     def _removeCallback(self):
         """Unparent any editors and save state if required."""
-        print 'Panel Exists ? : %s' % scriptedPanel(self.__name__, ex=1)
+        if not scriptedPanel(self.__name__, ex=1):
+            return                                  # no common call 
         print 'REMOVE CALLBACK: %s' % self.__name__
+        
         control=str(scriptedPanel(self.__name__,
                                   q=1,control=1))
         setParent(control)
+        #------------------------------- testmodule
         self.gSampleState['fsg1']=float(floatSliderGrp('fsg1',q=1,v=1))
         self.gSampleState['fsg2']=float(floatSliderGrp('fsg2',q=1,v=1))
         self.gSampleState['fsg3']=float(floatSliderGrp('fsg3',q=1,v=1))
         self.gSampleState['rbg']=float(radioButtonGrp('rbg',q=1,sl=1))
         self.gSampleState['rbg1']=float(radioButtonGrp('rbg2',q=1,sl=1))
-
-
+        #------------------------------- testmodule
+#------------------------------------------------------------------------
     def _deleteCallback(self):
         """Delete any editors and do any other cleanup required."""
         print 'DELETE CALLBACK'
 
-
+#------------------------------------------------------------------------
     def _saveCallback(self):
         """Save Callback."""
         print 'SAVE CALLBACK'
@@ -129,37 +140,38 @@ class PanelWindow( object ):
         reCreateCommand = 'print "RECREATE COMMAND %s" % '+ self.instance 
         return reCreateCommand
         
-
+#------------------------------------------------------------------------
     def show( self ):
         #scriptedPanel( self._title, edit=True, tearOff=True )
         print "SHOW PANEL"
-        print "self?: %s" % self.__name__
+        # print "self?: %s" % self.__name__
                 
-        if not scriptedPanel(self.__name__, ex=True):
-            wPanel = scriptedPanel(  self.__name__, unParent=True, type=self.__name__, label='iMaya' )
-        else: 
+        try:
+            wPanel = scriptedPanel(  self.__name__, unParent=True, type=self.__name__, label=self._title )
+        except: 
             wPanel = self.__name__
             
-        print "##### Panel Name Created %s" % wPanel
+            
+        # print "##### Panel Name Created %s" % wPanel
         
         try:
-            wName = window( self.winName, t='iMayaUI Window' )
+            wName = window( self._title, t='iMayaUI Window' )
         except:
-            wName = window( self.winName, edit=True, t='iMayaUI Window' )
+            wName = window( self._title, edit=True, t='iMayaUI Window' )
             
         
-        wFrame = frameLayout( self.panelWrapName, l='iMayaUIPanel',lv=True, bv=True )
-        print "Frame Name %s" % wFrame
+        wFrame = frameLayout( self.panelWrapName, l='PanelTitle',lv=True, bv=True ) ## get external definitions
+        # print "Frame Name %s" % wFrame
         
         #panelParent = (wName+'|'+wFrame)
-        panelParent = wFrame
+        self.panelParent = wFrame
         
-        scriptedPanel( wPanel, e=True, parent=panelParent )
+        scriptedPanel( wPanel, e=True, parent=self.panelParent)
         
         self.panelUIpath = scriptedPanel( self.__name__, q=True, control=True )
         showWindow()
         #mel.tearOffPanel( self._title, self.__name__, 1 )
-
+#------------------------------------------------------------------------
 
 
 def openTestPanel():
