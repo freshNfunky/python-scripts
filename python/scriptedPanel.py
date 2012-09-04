@@ -1,4 +1,4 @@
-from pymel import *
+from pymel.all import *
 
 class PanelWindow( object ):
     
@@ -46,32 +46,32 @@ class PanelWindow( object ):
 
     def _createCallback(self):
         """Create any editors unparented here and do any other initialization required."""
-        print 'CREATE CALLBACK'
+        #print 'CREATE CALLBACK'
 
 
     def _initCallback(self):
         """Re-initialize the panel on file -new or file -open."""
-        print 'INIT CALLBACK'
+        #print 'INIT CALLBACK'
 
 
     def _addCallback(self):
         """Create UI and parent any editors."""
-        print 'ADD CALLBACK'
+        #print 'ADD CALLBACK'
 
 
     def _removeCallback(self):
         """Unparent any editors and save state if required."""
-        print 'REMOVE CALLBACK'
+        #print 'REMOVE CALLBACK'
 
 
     def _deleteCallback(self):
         """Delete any editors and do any other cleanup required."""
-        print 'DELETE CALLBACK'
+        #print 'DELETE CALLBACK'
 
 
     def _saveCallback(self):
         """Save Callback."""
-        print 'SAVE CALLBACK'
+        #print 'SAVE CALLBACK'
         reCreateCommand = ''
         return reCreateCommand
 
@@ -83,5 +83,5 @@ class PanelWindow( object ):
 
 def openTestPanel():
     global testPanel
-    testPanel = PanelWindow( 'testPanel','testPanelobj' )
+    testPanel = PanelWindow( 'testPanel' )
     testPanel.show()
