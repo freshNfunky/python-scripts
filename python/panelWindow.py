@@ -7,6 +7,7 @@ class PanelWindow( object ):
     gSampleState = []
         
     _wName = ''
+    _optionShowMenue = 1
     windowTitle = 'iMayaUi Window'
     panelLabel = 'SamplePanel'
     panelWrapName = 'frm'
@@ -48,9 +49,9 @@ class PanelWindow( object ):
         
         if panelName == '':
             try:
-                panelName = scriptedPanel( mbv=1, unParent=True, type=self.__name__, label=self._title )
+                panelName = scriptedPanel(self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
                 scriptedPanel( panelName, e=True, parent=self.panelParent)
-                print "sceneUIreplacement has found something"
+                print "sceneUIreplacement has FAILED finding something - however: %s" % panelName
             except:
                 pass
         else:
@@ -58,7 +59,7 @@ class PanelWindow( object ):
                 pLabel = panel( self.__name__, query=True, label=True )
                 panelName = scriptedPanel( self.__name__, edit=True,  label=pLabel )
                 scriptedPanel( panelName, e=True, parent=self.panelParent)
-                print "sceneUIreplacement has FAILED finding something - however"
+                print "sceneUIreplacement has found something: %s" % pLabel
             except:
                 pass
 
@@ -150,9 +151,9 @@ class PanelWindow( object ):
         print "SHOW PANEL"
         # print "self?: %s" % self.__name__
         if not window(self._wName, exists=True ):          
-            print "fenster existiert nicht"
+            print "fenster existiert nicht: %s" % self._wName
             try: 
-                wPanel = scriptedPanel(  self.__name__, unParent=True, type=self.__name__, label=self._title )
+                wPanel = scriptedPanel(  self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
             except:
                 pLabel = panel( self.__name__, query=True, label=True )
                 wPanel = scriptedPanel( self.__name__, edit=True,  label=pLabel )
