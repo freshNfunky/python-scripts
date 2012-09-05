@@ -4,9 +4,10 @@ from pymel.all import *
 class PanelWindow( object ):
 
 #------------------------------------------------------------------------    
-    gSampleState=[]
+    gSampleState = []
         
-    # winName = 'iMayaUIWin'
+    _wName = ''
+    windowTitle = 'iMayaUi Window'
     panelLabel = 'SamplePanel'
     panelWrapName = 'frm'
 #------------------------------------------------------------------------    
@@ -40,15 +41,16 @@ class PanelWindow( object ):
         """Command to be call for new scene"""
         print 'SETUP CALLED'
         gMainPane = mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
-        print "Main Pane: %s" % sceneUIReplacement( update=gMainPane )
+        sceneUIReplacement( update=gMainPane )
         panelName = sceneUIReplacement( getNextScriptedPanel=(self.__name__, self._title) )
         
-        print "-->Panel Name: %s" % panelName
+        # print "-->Panel Name: %s" % panelName
         
         if panelName == '':
             try:
                 panelName = scriptedPanel( mbv=1, unParent=True, type=self.__name__, label=self._title )
                 scriptedPanel( panelName, e=True, parent=self.panelParent)
+                print "sceneUIreplacement has found something"
             except:
                 pass
         else:
@@ -56,6 +58,7 @@ class PanelWindow( object ):
                 pLabel = panel( self.__name__, query=True, label=True )
                 panelName = scriptedPanel( self.__name__, edit=True,  label=pLabel )
                 scriptedPanel( panelName, e=True, parent=self.panelParent)
+                print "sceneUIreplacement has FAILED finding something - however"
             except:
                 pass
 
@@ -137,7 +140,8 @@ class PanelWindow( object ):
         """Save Callback."""
         print 'SAVE CALLBACK'
         indent="\n\t\t\t"
-        reCreateCommand = 'print "RECREATE COMMAND %s" % '+ self.instance 
+        reCreateCommand = 'python("print \\"RECREATE COMMAND %s\\" % '+ self.instance + ' ")' 
+        print "prepared recreate Command: %s" % reCreateCommand
         return reCreateCommand
         
 #------------------------------------------------------------------------
@@ -145,32 +149,25 @@ class PanelWindow( object ):
         #scriptedPanel( self._title, edit=True, tearOff=True )
         print "SHOW PANEL"
         # print "self?: %s" % self.__name__
-                
-        try:
-            wPanel = scriptedPanel(  self.__name__, unParent=True, type=self.__name__, label=self._title )
-        except: 
-            wPanel = self.__name__
+        if not window(self._wName, exists=True ):          
+            print "fenster existiert nicht"
+            try: 
+                wPanel = scriptedPanel(  self.__name__, unParent=True, type=self.__name__, label=self._title )
+            except:
+                pLabel = panel( self.__name__, query=True, label=True )
+                wPanel = scriptedPanel( self.__name__, edit=True,  label=pLabel )
             
+            self._wName = window( self._title, t=self.windowTitle )
+        
+            wFrame = frameLayout( self.panelWrapName, l=self.panelLabel ,lv=True, bv=True ) ## get external definitions
+            # print "Frame Name %s" % wFrame
+            #panelParent = (wName+'|'+wFrame)
+            self.panelParent = wFrame
+            scriptedPanel( wPanel, e=True, parent=self.panelParent)
+            self.panelUIpath = scriptedPanel( self.__name__, q=True, control=True )
             
-        # print "##### Panel Name Created %s" % wPanel
-        
-        try:
-            wName = window( self._title, t='iMayaUI Window' )
-        except:
-            wName = window( self._title, edit=True, t='iMayaUI Window' )
-            
-        
-        wFrame = frameLayout( self.panelWrapName, l='PanelTitle',lv=True, bv=True ) ## get external definitions
-        # print "Frame Name %s" % wFrame
-        
-        #panelParent = (wName+'|'+wFrame)
-        self.panelParent = wFrame
-        
-        scriptedPanel( wPanel, e=True, parent=self.panelParent)
-        
-        self.panelUIpath = scriptedPanel( self.__name__, q=True, control=True )
-        showWindow()
-        #mel.tearOffPanel( self._title, self.__name__, 1 )
+        showWindow(self._wName)
+
 #------------------------------------------------------------------------
 
 
