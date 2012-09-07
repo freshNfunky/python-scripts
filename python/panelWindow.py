@@ -1,4 +1,4 @@
-from pymel.all import *
+import pymel as mel
 
 
 class PanelWindow( object ):
@@ -20,14 +20,14 @@ class PanelWindow( object ):
 
         self.instance = str(namespace) + '.' + self.__name__
         
-        if not scriptedPanelType( self.__name__, query=True, exists=True ):
-            scriptedPanelType( self.__name__, unique=True )
+        if not mel.scriptedPanelType( self.__name__, query=True, exists=True ):
+            mel.scriptedPanelType( self.__name__, unique=True )
         print self.instance 
         jobCmd = 'python(\\\"%s._setup()\\\")' % self.instance
         job = "scriptJob -replacePrevious -parent \"%s\" -event \"SceneOpened\" \"%s\";" % ( self.__name__, jobCmd )
         mel.eval(job)
 
-        result = scriptedPanelType( self.__name__, edit=True,
+        result = mel.scriptedPanelType( self.__name__, edit=True,
                            unique=True,
                            createCallback='python("import %s ; %s._createCallback()")' %  (namespace, self.instance),
                            initCallback='python("import %s ; %s._initCallback()"  )' % (namespace, self.instance),
@@ -43,22 +43,22 @@ class PanelWindow( object ):
         print 'SETUP CALLED'
         gMainPane = mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
         sceneUIReplacement( update=gMainPane )
-        panelName = sceneUIReplacement( getNextScriptedPanel=(self.__name__, self._title) )
+        panelName = sceneUIReplacement( getNextmel.scriptedPanel=(self.__name__, self._title) )
         
         # print "-->Panel Name: %s" % panelName
         
         if panelName == '':
             try:
-                panelName = scriptedPanel(self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
-                scriptedPanel( panelName, e=True, parent=self.panelParent)
+                panelName = mel.scriptedPanel(self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
+                mel.scriptedPanel( panelName, e=True, parent=self.panelParent)
                 print "sceneUIreplacement has FAILED finding something - however: %s" % panelName
             except:
                 pass
         else:
             try:
                 pLabel = panel( self.__name__, query=True, label=True )
-                panelName = scriptedPanel( self.__name__, edit=True,  label=pLabel )
-                scriptedPanel( panelName, e=True, parent=self.panelParent)
+                panelName = mel.scriptedPanel( self.__name__, edit=True,  label=pLabel )
+                mel.scriptedPanel( panelName, e=True, parent=self.panelParent)
                 print "sceneUIreplacement has found something: %s" % pLabel
             except:
                 pass
@@ -117,11 +117,11 @@ class PanelWindow( object ):
 #------------------------------------------------------------------------
     def _removeCallback(self):
         """Unparent any editors and save state if required."""
-        if not scriptedPanel(self.__name__, ex=1):
+        if not mel.scriptedPanel(self.__name__, ex=1):
             return                                  # no common call 
         print 'REMOVE CALLBACK: %s' % self.__name__
         
-        control=str(scriptedPanel(self.__name__,
+        control=str(mel.scriptedPanel(self.__name__,
                                   q=1,control=1))
         setParent(control)
         #------------------------------- testmodule
@@ -147,16 +147,16 @@ class PanelWindow( object ):
         
 #------------------------------------------------------------------------
     def show( self ):
-        #scriptedPanel( self._title, edit=True, tearOff=True )
+        #mel.scriptedPanel( self._title, edit=True, tearOff=True )
         print "SHOW PANEL"
         # print "self?: %s" % self.__name__
         if not window(self._wName, exists=True ):          
             print "fenster existiert nicht: %s" % self._wName
             try: 
-                wPanel = scriptedPanel(  self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
+                wPanel = mel.scriptedPanel(  self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
             except:
                 pLabel = panel( self.__name__, query=True, label=True )
-                wPanel = scriptedPanel( self.__name__, edit=True,  label=pLabel )
+                wPanel = mel.scriptedPanel( self.__name__, edit=True,  label=pLabel )
             
             self._wName = window( self._title, t=self.windowTitle )
         
@@ -164,8 +164,8 @@ class PanelWindow( object ):
             # print "Frame Name %s" % wFrame
             #panelParent = (wName+'|'+wFrame)
             self.panelParent = wFrame
-            scriptedPanel( wPanel, e=True, parent=self.panelParent)
-            self.panelUIpath = scriptedPanel( self.__name__, q=True, control=True )
+            mel.scriptedPanel( wPanel, e=True, parent=self.panelParent)
+            self.panelUIpath = mel.scriptedPanel( self.__name__, q=True, control=True )
             
         showWindow(self._wName)
 
