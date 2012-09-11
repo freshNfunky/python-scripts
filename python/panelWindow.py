@@ -1,4 +1,4 @@
-import pymel as mel
+import pymel.core as mel
 
 
 class PanelWindow( object ):
@@ -25,7 +25,7 @@ class PanelWindow( object ):
         print self.instance 
         jobCmd = 'python(\\\"%s._setup()\\\")' % self.instance
         job = "scriptJob -replacePrevious -parent \"%s\" -event \"SceneOpened\" \"%s\";" % ( self.__name__, jobCmd )
-        mel.eval(job)
+        mel.mel.eval(job)
 
         result = mel.scriptedPanelType( self.__name__, edit=True,
                            unique=True,
@@ -41,9 +41,9 @@ class PanelWindow( object ):
     def _setup(self):
         """Command to be call for new scene"""
         print 'SETUP CALLED'
-        gMainPane = mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
-        sceneUIReplacement( update=gMainPane )
-        panelName = sceneUIReplacement( getNextmel.scriptedPanel=(self.__name__, self._title) )
+        gMainPane = mel.mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
+        mel.sceneUIReplacement( update=gMainPane )
+        panelName = mel.sceneUIReplacement( getNextscriptedPanel=(self.__name__, self._title) )
         
         # print "-->Panel Name: %s" % panelName
         
@@ -86,33 +86,33 @@ class PanelWindow( object ):
             self._createCallback()
             print "---->gSampleState was Empty"
         #------------------------------- testmodule
-        columnLayout('topCol',adj=True)
-        separator(h=10,style="none")
-        frameLayout(mw=10,l="Sliders")
-        columnLayout('sampleCol',adj=True)
-        separator(h=10,style="none")
-        floatSliderGrp('fsg1',v=self.gSampleState['fsg1'],
+        mel.columnLayout('topCol',adj=True)
+        mel.separator(h=10,style="none")
+        mel.frameLayout(mw=10,l="Sliders")
+        mel.columnLayout('sampleCol',adj=True)
+        mel.separator(h=10,style="none")
+        mel.floatSliderGrp('fsg1',v=self.gSampleState['fsg1'],
             l="Property A",f=True)
-        floatSliderGrp('fsg2',v=self.gSampleState['fsg2'],
+        mel.floatSliderGrp('fsg2',v=self.gSampleState['fsg2'],
             l="Property B",f=True)
-        floatSliderGrp('fsg3',v=self.gSampleState['fsg3'],
+        mel.floatSliderGrp('fsg3',v=self.gSampleState['fsg3'],
             l="Property C",f=True)
-        separator(h=10,style="none")
-        setParent('..')
-        setParent('..')
-        separator(h=10,style="none")
-        frameLayout(mw=10,l="Radio Buttons")
-        columnLayout('sampleCol2')
-        separator(h=10,style="none")
-        radioButtonGrp('rbg',nrb=3,
+        mel.separator(h=10,style="none")
+        mel.setParent('..')
+        mel.setParent('..')
+        mel.separator(h=10,style="none")
+        mel.frameLayout(mw=10,l="Radio Buttons")
+        mel.columnLayout('sampleCol2')
+        mel.separator(h=10,style="none")
+        mel.radioButtonGrp('rbg',nrb=3,
             l="Big Options",
             select=self.gSampleState['rbg'],
             la3=("Option 1", "Option 2", "Option 3"))
-        radioButtonGrp('rbg2',nrb=3,
+        mel.radioButtonGrp('rbg2',nrb=3,
             l="Little Options",
             select=self.gSampleState['rbg'],
             la3=("Option 4", "Option 5", "Option 6"))
-        separator(h=10,style="none")
+        mel.separator(h=10,style="none")
         #------------------------------- testmodule
 #------------------------------------------------------------------------
     def _removeCallback(self):
@@ -150,7 +150,7 @@ class PanelWindow( object ):
         #mel.scriptedPanel( self._title, edit=True, tearOff=True )
         print "SHOW PANEL"
         # print "self?: %s" % self.__name__
-        if not window(self._wName, exists=True ):          
+        if not mel.window(self._wName, exists=True ):          
             print "fenster existiert nicht: %s" % self._wName
             try: 
                 wPanel = mel.scriptedPanel(  self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
@@ -158,16 +158,16 @@ class PanelWindow( object ):
                 pLabel = panel( self.__name__, query=True, label=True )
                 wPanel = mel.scriptedPanel( self.__name__, edit=True,  label=pLabel )
             
-            self._wName = window( self._title, t=self.windowTitle )
+            self._wName = mel.window( self._title, t=self.windowTitle )
         
-            wFrame = frameLayout( self.panelWrapName, l=self.panelLabel ,lv=True, bv=True ) ## get external definitions
+            wFrame = mel.frameLayout( self.panelWrapName, l=self.panelLabel ,lv=True, bv=True ) ## get external definitions
             # print "Frame Name %s" % wFrame
             #panelParent = (wName+'|'+wFrame)
             self.panelParent = wFrame
             mel.scriptedPanel( wPanel, e=True, parent=self.panelParent)
             self.panelUIpath = mel.scriptedPanel( self.__name__, q=True, control=True )
             
-        showWindow(self._wName)
+        mel.showWindow(self._wName)
 
 #------------------------------------------------------------------------
 
