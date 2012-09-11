@@ -85,35 +85,14 @@ class PanelWindow( object ):
         if not self.gSampleState.__len__() : 
             self._createCallback()
             print "---->gSampleState was Empty"
-        #------------------------------- testmodule
-        mel.columnLayout('topCol',adj=True)
-        mel.separator(h=10,style="none")
-        mel.frameLayout(mw=10,l="Sliders")
-        mel.columnLayout('sampleCol',adj=True)
-        mel.separator(h=10,style="none")
-        mel.floatSliderGrp('fsg1',v=self.gSampleState['fsg1'],
-            l="Property A",f=True)
-        mel.floatSliderGrp('fsg2',v=self.gSampleState['fsg2'],
-            l="Property B",f=True)
-        mel.floatSliderGrp('fsg3',v=self.gSampleState['fsg3'],
-            l="Property C",f=True)
-        mel.separator(h=10,style="none")
-        mel.setParent('..')
-        mel.setParent('..')
-        mel.separator(h=10,style="none")
-        mel.frameLayout(mw=10,l="Radio Buttons")
-        mel.columnLayout('sampleCol2')
-        mel.separator(h=10,style="none")
-        mel.radioButtonGrp('rbg',nrb=3,
-            l="Big Options",
-            select=self.gSampleState['rbg'],
-            la3=("Option 1", "Option 2", "Option 3"))
-        mel.radioButtonGrp('rbg2',nrb=3,
-            l="Little Options",
-            select=self.gSampleState['rbg'],
-            la3=("Option 4", "Option 5", "Option 6"))
-        mel.separator(h=10,style="none")
-        #------------------------------- testmodule
+            
+            
+        # restore content from database
+        
+        self.createSliderObj() 
+        
+        self.createRadioBtnObj()
+       
 #------------------------------------------------------------------------
     def _removeCallback(self):
         """Unparent any editors and save state if required."""
@@ -123,7 +102,7 @@ class PanelWindow( object ):
         
         control=str(mel.scriptedPanel(self.__name__,
                                   q=1,control=1))
-        setParent(control)
+        mel.setParent(control)
         #------------------------------- testmodule
         self.gSampleState['fsg1']=float(floatSliderGrp('fsg1',q=1,v=1))
         self.gSampleState['fsg2']=float(floatSliderGrp('fsg2',q=1,v=1))
@@ -155,7 +134,7 @@ class PanelWindow( object ):
             try: 
                 wPanel = mel.scriptedPanel(  self.__name__, mbv=self._optionShowMenue, unParent=True, type=self.__name__, label=self._title )
             except:
-                pLabel = panel( self.__name__, query=True, label=True )
+                pLabel = mel.panel( self.__name__, query=True, label=True )
                 wPanel = mel.scriptedPanel( self.__name__, edit=True,  label=pLabel )
             
             self._wName = mel.window( self._title, t=self.windowTitle )
@@ -170,7 +149,51 @@ class PanelWindow( object ):
         mel.showWindow(self._wName)
 
 #------------------------------------------------------------------------
-
+    def createSliderObj( self ):
+        
+        
+        control=str(mel.scriptedPanel(self.__name__,
+                                  q=1,control=1))
+        mel.setParent(control)
+        # mel.setParent(self.panelUIpath)
+        
+        mel.columnLayout('topCol',adj=True)
+        mel.separator(h=10,style="none")
+        mel.frameLayout(mw=10,l="Sliders")
+        mel.columnLayout('sampleCol',adj=True)
+        mel.separator(h=10,style="none")
+        mel.floatSliderGrp('fsg1',v=self.gSampleState['fsg1'],
+            l="Property A",f=True)
+        mel.floatSliderGrp('fsg2',v=self.gSampleState['fsg2'],
+            l="Property B",f=True)
+        mel.floatSliderGrp('fsg3',v=self.gSampleState['fsg3'],
+            l="Property C",f=True)
+        mel.separator(h=10,style="none")
+        mel.setParent('..')
+        mel.setParent('..')
+        mel.separator(h=10,style="none")
+        
+#------------------------------------------------------------------------        
+    def createRadioBtnObj( self ):
+        
+        
+        control=str(mel.scriptedPanel(self.__name__,
+                                  q=1,control=1))
+        mel.setParent(control)    
+        # mel.setParent(self.panelUIpath)
+            
+        mel.frameLayout(mw=10,l="Radio Buttons")
+        mel.columnLayout('sampleCol2')
+        mel.separator(h=10,style="none")
+        mel.radioButtonGrp('rbg',nrb=3,
+            l="Big Options",
+            select=self.gSampleState['rbg'],
+            la3=("Option 1", "Option 2", "Option 3"))
+        mel.radioButtonGrp('rbg2',nrb=3,
+            l="Little Options",
+            select=self.gSampleState['rbg'],
+            la3=("Option 4", "Option 5", "Option 6"))
+        mel.separator(h=10,style="none")
 
 def openTestPanel():
     # global testPanel
