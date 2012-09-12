@@ -10,6 +10,8 @@ class PanelWindow( object ):
     _optionShowMenue = 1
     _scrollField = 'scrollField'
     _rowColumn = 'rowColumn'
+    _ActionCol = ''
+    _VariablesCol = ''
     windowTitle = 'iMayaUi Window'
     panelLabel = 'SamplePanel'
     panelWrapName = 'frm'
@@ -96,12 +98,13 @@ class PanelWindow( object ):
                            verticalScrollBarThickness=16)
         
         # mel.columnLayout('topCol',adj=True)
-        print mel.rowColumnLayout( self._rowColumn, numberOfColumns=2 )
+        mel.rowColumnLayout( self._rowColumn, numberOfColumns=2 )
+        self._ActionCol = mel.columnLayout('ActionCol',adj=True)
+        mel.setParent('..')
+        self._VariablesCol = mel.columnLayout('VariablesCol',adj=True)
         # print "scrollLayout UI path: %s" % self._scrollField 
                          
-        self.createSliderObj() 
-        
-        self.createRadioBtnObj()
+       
        
 #------------------------------------------------------------------------
     def _removeCallback(self):
@@ -110,9 +113,9 @@ class PanelWindow( object ):
             return                                  # no common call 
         print 'REMOVE CALLBACK: %s' % self.__name__
         
-        control=str(mel.scriptedPanel(self.__name__,
-                                  q=1,control=1))
-        mel.setParent(control)
+        # control=str(mel.scriptedPanel(self.__name__,
+        #                           q=1,control=1))
+        mel.setParent(self._ActionCol)
         #------------------------------- testmodule
         self.gSampleState['fsg1']=float(floatSliderGrp('fsg1',q=1,v=1))
         self.gSampleState['fsg2']=float(floatSliderGrp('fsg2',q=1,v=1))
@@ -160,16 +163,17 @@ class PanelWindow( object ):
 
 #------------------------------------------------------------------------
     def createSliderObj( self ):
+        """ creates a Slider Element """
         
-        
-        control=str(mel.scriptedPanel(self.__name__,
-                                  q=1,control=1))
+        # control=str(mel.scriptedPanel(self.__name__,
+        #                          q=1,control=1))
         # mel.setParent(control)
         # mel.setParent(self.panelUIpath)
         if mel.scrollLayout(self._scrollField, ex=True):
             
-            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
-                        
+            # mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+            mel.setParent( self._ActionCol)
+                       
             mel.separator(h=10,style="none")
             ObjUIpath = mel.frameLayout(mw=10,l="Sliders")
             mel.columnLayout('sampleCol',adj=True)
@@ -191,21 +195,16 @@ class PanelWindow( object ):
         
 #------------------------------------------------------------------------        
     def createRadioBtnObj( self ):
-        
-        
-        control=str(mel.scriptedPanel(self.__name__,
-                                   q=1,control=1))
-        # mel.setParent(control)    
-        # mel.setParent(self.panelUIpath)
+        """ creates a RadioButton Element """    
         
         if mel.scrollLayout(self._scrollField, ex=True):
             
-            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+            mel.setParent( self._ActionCol)
             
             mel.separator(h=10,style="none")    
                          
             ObjUIpath = mel.frameLayout(mw=10,l="Radio Buttons")
-            mel.columnLayout('sampleCol2')
+            mel.columnLayout('sampleCol')
             mel.separator(h=10,style="none")
             
             mel.radioButtonGrp('rbg',nrb=3,
@@ -223,29 +222,37 @@ class PanelWindow( object ):
 
 #------------------------------------------------------------------------        
     def createTextfieldObj( self , content):
-        
-        
-        control=str(mel.scriptedPanel(self.__name__,
-                                   q=1,control=1))
-        # mel.setParent(control)    
-        # mel.setParent(self.panelUIpath)
-        
+        """ creates a TextBox Element """
+                        
         if mel.scrollLayout(self._scrollField, ex=True):
             
-            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+            mel.setParent( self._ActionCol)
             
             mel.separator(h=10,style="none")
                              
             ObjUIpath = mel.frameLayout(mw=10,l="TextField")
-            mel.columnLayout('sampleCol3')
+            mel.columnLayout('sampleCol',adj=True)
             mel.separator(h=10,style="none")
-            
-            mel.scrollField( editable=False, wordWrap=False, text = content )
+                    
+            mel.scrollField(numberOfLines=3, editable=False, 
+                            wordWrap=False, h=100, text = content )
             
             mel.separator(h=10,style="none")
                         
             return ObjUIpath
-
+        
+#------------------------------------------------------------------------        
+    def createVariableObj( self , name):
+        """ creates a TextBox Element """
+        
+        if mel.scrollLayout(self._scrollField, ex=True):
+            
+            mel.setParent( self._VariablesCol )
+            
+            ObjUIpath = mel.button(label="button %s" % name)
+            
+            return ObjUIpath
+            
 
 def openTestPanel():
     
