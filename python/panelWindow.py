@@ -8,7 +8,8 @@ class PanelWindow( object ):
         
     _wName = ''
     _optionShowMenue = 1
-    _scrollField = ''
+    _scrollField = 'scrollField'
+    _rowColumn = 'rowColumn'
     windowTitle = 'iMayaUi Window'
     panelLabel = 'SamplePanel'
     panelWrapName = 'frm'
@@ -89,12 +90,18 @@ class PanelWindow( object ):
             
             
         # restore content from database
-        self._scrollField = mel.scrollLayout(horizontalScrollBarThickness=16, 
+        # self._scrollField =
+         
+        mel.scrollLayout(self._scrollField, horizontalScrollBarThickness=16, 
                            verticalScrollBarThickness=16)
-                         
-        self.createSliderObj('1') 
         
-        self.createRadioBtnObj('1')
+        # mel.columnLayout('topCol',adj=True)
+        print mel.rowColumnLayout( self._rowColumn, numberOfColumns=2 )
+        # print "scrollLayout UI path: %s" % self._scrollField 
+                         
+        self.createSliderObj() 
+        
+        self.createRadioBtnObj()
        
 #------------------------------------------------------------------------
     def _removeCallback(self):
@@ -152,61 +159,100 @@ class PanelWindow( object ):
         mel.showWindow(self._wName)
 
 #------------------------------------------------------------------------
-    def createSliderObj( self , ID):
+    def createSliderObj( self ):
         
         
-        # control=str(mel.scriptedPanel(self.__name__,
-        #                          q=1,control=1))
+        control=str(mel.scriptedPanel(self.__name__,
+                                  q=1,control=1))
         # mel.setParent(control)
         # mel.setParent(self.panelUIpath)
         if mel.scrollLayout(self._scrollField, ex=True):
             
-            mel.setParent(self._scrollField)
+            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+                        
+            mel.separator(h=10,style="none")
+            ObjUIpath = mel.frameLayout(mw=10,l="Sliders")
+            mel.columnLayout('sampleCol',adj=True)
+            mel.separator(h=10,style="none")
             
-            mel.columnLayout(str(ID+'_topCol'),adj=True)
-            mel.separator(h=10,style="none")
-            mel.frameLayout(mw=10,l=str(ID+"_Sliders"))
-            mel.columnLayout(str(ID+'_sampleCol'),adj=True)
-            mel.separator(h=10,style="none")
-            mel.floatSliderGrp(str(ID+'_fsg1'),v=self.gSampleState['fsg1'],
+            mel.floatSliderGrp('fsg1',v=self.gSampleState['fsg1'],
                 l="Property A",f=True)
-            mel.floatSliderGrp(str(ID+'_fsg2'),v=self.gSampleState['fsg2'],
+            mel.floatSliderGrp('fsg2',v=self.gSampleState['fsg2'],
                 l="Property B",f=True)
-            mel.floatSliderGrp(str(ID+'_fsg3'),v=self.gSampleState['fsg3'],
+            mel.floatSliderGrp('fsg3',v=self.gSampleState['fsg3'],
                 l="Property C",f=True)
+            
             mel.separator(h=10,style="none")
-            mel.setParent('..')
-            mel.setParent('..')
-            mel.separator(h=10,style="none")
+            # mel.setParent('..')
+            # mel.setParent('..')
+            
+            
+            return ObjUIpath
         
 #------------------------------------------------------------------------        
-    def createRadioBtnObj( self , ID ):
+    def createRadioBtnObj( self ):
         
         
-        # control=str(mel.scriptedPanel(self.__name__,
-        #                           q=1,control=1))
+        control=str(mel.scriptedPanel(self.__name__,
+                                   q=1,control=1))
         # mel.setParent(control)    
         # mel.setParent(self.panelUIpath)
+        
         if mel.scrollLayout(self._scrollField, ex=True):
             
-            mel.setParent(self._scrollField)
-                             
-            mel.frameLayout(mw=10,l=str(ID+"_Radio Buttons"))
-            mel.columnLayout(str(ID+'sampleCol2'))
+            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+            
+            mel.separator(h=10,style="none")    
+                         
+            ObjUIpath = mel.frameLayout(mw=10,l="Radio Buttons")
+            mel.columnLayout('sampleCol2')
             mel.separator(h=10,style="none")
-            mel.radioButtonGrp(str(ID+'rbg'),nrb=3,
-                l=str(ID+"Big Options"),
+            
+            mel.radioButtonGrp('rbg',nrb=3,
+                l="Big Options",
                 select=self.gSampleState['rbg'],
                 la3=("Option 1", "Option 2", "Option 3"))
             mel.radioButtonGrp('rbg2',nrb=3,
-                l=str(ID+"Little Options"),
+                l="Little Options",
                 select=self.gSampleState['rbg'],
                 la3=("Option 4", "Option 5", "Option 6"))
+            
             mel.separator(h=10,style="none")
+            
+            return ObjUIpath
+
+#------------------------------------------------------------------------        
+    def createTextfieldObj( self , content):
+        
+        
+        control=str(mel.scriptedPanel(self.__name__,
+                                   q=1,control=1))
+        # mel.setParent(control)    
+        # mel.setParent(self.panelUIpath)
+        
+        if mel.scrollLayout(self._scrollField, ex=True):
+            
+            mel.setParent(control+'|'+self._scrollField+'|'+self._rowColumn)
+            
+            mel.separator(h=10,style="none")
+                             
+            ObjUIpath = mel.frameLayout(mw=10,l="TextField")
+            mel.columnLayout('sampleCol3')
+            mel.separator(h=10,style="none")
+            
+            mel.scrollField( editable=False, wordWrap=False, text = content )
+            
+            mel.separator(h=10,style="none")
+                        
+            return ObjUIpath
+
 
 def openTestPanel():
+    
     # global testPanel
-    global PanelObj
+    global PanelObj                                             #PanelObj must be a global variable to make the CallbackFunktions work
+    
     PanelObj = PanelWindow( 'PanelObj','Panel Obj Window' ) 
     PanelObj.show()
+    
     return PanelObj
