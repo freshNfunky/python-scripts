@@ -27,9 +27,11 @@ class PanelWindow( object ):
         if not mel.scriptedPanelType( self.__name__, query=True, exists=True ):
             mel.scriptedPanelType( self.__name__, unique=True )
         print self.instance 
-        jobCmd = 'python(\\\"%s._setup()\\\")' % self.instance
-        job = "scriptJob -replacePrevious -parent \"%s\" -event \"SceneOpened\" \"%s\";" % ( self.__name__, jobCmd )
-        mel.mel.eval(job)
+        
+        # convert into Python one day:
+        jobCmd = '%s._setup()' % self.instance
+        job = mel.scriptJob(replacePrevious=True, parent=self.__name__, event=["SceneOpened",jobCmd])
+        # mel.mel.eval(job)
 
         result = mel.scriptedPanelType( self.__name__, edit=True,
                            unique=True,
@@ -47,7 +49,7 @@ class PanelWindow( object ):
         print 'SETUP CALLED'
         gMainPane = mel.mel.eval( 'global string $gMainPane; $temp = $gMainPane;' )
         mel.sceneUIReplacement( update=gMainPane )
-        panelName = mel.sceneUIReplacement( getNextscriptedPanel=(self.__name__, self._title) )
+        panelName = mel.sceneUIReplacement( getNextScriptedPanel=(self.__name__, self._title) )
         
         # print "-->Panel Name: %s" % panelName
         
